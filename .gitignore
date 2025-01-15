@@ -1,3 +1,4 @@
 /target
+/src/mainv1.rs
 .env
 readme-the-step.md
