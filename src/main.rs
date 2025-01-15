@@ -1,4 +1,6 @@
+use dotenv::dotenv;
 use ssh2::Session;
+use std::env;
 //use std::error::Error;
 use anyhow::{Result, Context};
 use std::io::Read;
@@ -25,14 +27,16 @@ async fn execute_command(session: &Session, command: &str) -> Result<String, any
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let username = "user"; // Replace with your SSH username
-    let password = "pass"; // Replace with your SSH password
-    let host = "host"; // Replace with your server IP
-    let port = 22;
+    dotenv().ok();
+
+    let username = env::var("SSH_USERNAME").context("SSH_USERNAME not set in .env file")?;
+    let password = env::var("SSH_PASSWORD").context("SSH_PASSWORD not set in .env file")?;
+    let host = env::var("SSH_HOST").context("SSH_HOST not set in .env file")?;
+    let port = env::var("SSH_PORT").unwrap_or_else(|_| "22".to_string()).parse::<u16>()?;
 
     // Attempt to resolve the host
     println!("Attempting to resolve host: {}", host);
-    match (host, port).to_socket_addrs() {
+    match (host.as_str(), port).to_socket_addrs() {
         Ok(mut addrs) => {
             if let Some(addr) = addrs.next() {
                 println!("Successfully resolved: {:?}", addr);
@@ -66,7 +70,7 @@ async fn main() -> Result<(), anyhow::Error> {
     session.handshake().context("Failed to handshake with SSH server")?;
 
     // Authenticate using password
-    session.userauth_password(username, password).context("Failed to authenticate with SSH server")?;
+    session.userauth_password(&username, &password).context("Failed to authenticate with SSH server")?;
 
     // Commands to get CPU, memory, and disk utilization
     let cpu_command = "top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'";
